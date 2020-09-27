@@ -33,8 +33,15 @@ setup(
         'todo list', 'priorities', 'productivity'
     ],
     install_requires=[
-        'remind-me-some',
-        'email-keyword-matcher',
+        'email-keyword-matcher',  # send emails and check responses
+        'remind-me-some',  # most of the logic
+        'schedule',  # job scheduling
+    ],
+    tests_require=[
+        'flake8',  # check code style
+        'pep257',  # check docstrings
+        'pytest',  # testing framework
+        'pytest-cov',  # code coverage
     ],
     classifiers=[
         'Intended Audience :: Developers',
