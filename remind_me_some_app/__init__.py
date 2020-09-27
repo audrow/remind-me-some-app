@@ -2,7 +2,6 @@ from email_keyword_matcher import EmailKeywordMatcher
 from remind_me_some import Goal, ScheduleManager
 from schedule import Scheduler
 
-import atexit
 from datetime import timedelta
 import logging
 import os
@@ -83,7 +82,6 @@ class RemindMeSomeApp:
 
         self._is_running = False
         self._run_thread: typing.Optional[threading.Thread] = None
-        atexit.register(self.stop)
 
     @property
     def is_running(self):
