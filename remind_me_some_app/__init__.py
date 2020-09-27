@@ -1,6 +1,6 @@
 from email_keyword_matcher import EmailKeywordMatcher
 from remind_me_some import Goal, ScheduleManager
-import schedule
+from schedule import Scheduler
 
 from datetime import timedelta
 import logging
@@ -8,6 +8,7 @@ import os
 import threading
 import time
 import typing
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__file__)
@@ -57,15 +58,13 @@ class RemindMeSomeApp:
 
     def __init__(
             self,
-            sleep_duration: int = 5,
-            save_file_path: typing.Optional[str] = None,
+            sleep_duration: float = 5.0,
             email_manager_kwargs: dict = None,
             schedule_manager_kwargs: dict = None,
     ):
         logger.info(f'Initializing {self.__class__.__name__} instance')
 
         self._sleep_duration = sleep_duration
-        self._save_file_path = save_file_path
 
         if email_manager_kwargs is None:
             email_manager_kwargs = dict()
@@ -73,14 +72,14 @@ class RemindMeSomeApp:
 
         if schedule_manager_kwargs is None:
             schedule_manager_kwargs = dict()
-        self.schedule_manager = ScheduleManager(**schedule_manager_kwargs)
+        self._schedule_manager = ScheduleManager(**schedule_manager_kwargs)
 
-        self._scheduler = schedule.Scheduler()
+        self._scheduler = Scheduler()
         self._scheduler.every().minute.do(self._run_schedule_manager)
         self._scheduler.every().day.do(self._update_schedule)
 
         self._is_running = False
-        self._save()
+        self._run_thread: typing.Optional[threading.Thread] = None
 
     @property
     def is_running(self):
@@ -88,29 +87,11 @@ class RemindMeSomeApp:
 
     def _run_schedule_manager(self):
         logger.info("Running schedule")
-        self.schedule_manager.run()
-        self._save()
+        self._schedule_manager.run()
 
     def _update_schedule(self):
         logger.info("Updating schedule")
-        self.schedule_manager.update_schedule()
-        self._save()
-
-    def _save(self):
-        if self._save_file_path is not None:
-            self._save_schedule_manager()
-
-    def _save_schedule_manager(self):
-        logger.info(f'Saving state to {self._save_file_path}')
-        with open(self._save_file_path, 'wb') as f:
-            pass
-    
-    def _load_schedule_manager(self):
-        if self._save_file_path is None:
-            raise ValueError('No file path given')
-        logger.info(f'Loading state from {self._save_file_path}')
-        with open(self._save_file_path, 'rb') as f:
-            pass
+        self._schedule_manager.update_schedule()
 
     def add_goal(
             self,
@@ -121,7 +102,7 @@ class RemindMeSomeApp:
         if 'callback' not in kwargs:
             kwargs['callback'] = self._email_manager.make_send_email_callback(name),
         logger.info(f"Adding goal '{name}'")
-        self.schedule_manager.add_goal(
+        self._schedule_manager.add_goal(
             Goal(
                 name=name,
                 frequency=frequency,
@@ -131,23 +112,34 @@ class RemindMeSomeApp:
         self._update_schedule()
 
     def start(self):
+        if self._is_running:
+            raise RuntimeError("Already running")
         self._is_running = True
-        threading.Thread(target=self._run_loop).start()
+        self._run_thread = threading.Thread(target=self._run_loop)
+        self._run_thread.start()
 
     def _run_loop(self):
         logger.info('Starting run loop')
         while self.is_running:
-            logger.debug('Run loop running')
-            self._scheduler.run_pending()
+            self._run_once()
             time.sleep(self._sleep_duration)
         logger.info('Exiting run loop')
 
+    def _run_once(self):
+        logger.debug('Running')
+        self._scheduler.run_pending()
+
     def stop(self):
+        if not self._is_running:
+            raise RuntimeError("Already stopped")
         logger.info('Stopping run loop')
         self._is_running = False
+        self._run_thread = None
 
     def __del__(self):
-        self._is_running = False
+        if self.is_running:
+            self._is_running = False
+            self._run_thread.join()
 
 
 if __name__ == '__main__':
