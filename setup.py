@@ -42,7 +42,6 @@ setup(
         'pep257',  # check docstrings
         'pytest',  # testing framework
         'pytest-cov',  # code coverage
-        'pytest-timeout',  # timeout tests
     ],
     classifiers=[
         'Intended Audience :: Developers',

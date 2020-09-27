@@ -1,0 +1,38 @@
+name: Continuous Integration
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.6, 3.7, 3.8]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Setup the project and install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install .
+    - name: Check coding style matches pep8
+      run:  flake8 remind_me_some_app tests
+    - name: Run tests
+      run: pytest --cov=remind_me_some_app --cov-report=xml
+      env:
+        ROBOT_EMAIL_ADDRESS: ${{ secrets.ROBOT_EMAIL_ADDRESS }}
+        ROBOT_EMAIL_PASSWORD: ${{ secrets.ROBOT_EMAIL_PASSWORD }}
+        ROBOT_EMAIL_HOST: ${{ secrets.ROBOT_EMAIL_HOST }}
+        ROBOT_EMAIL_PORT: ${{ secrets.ROBOT_EMAIL_PORT }}
+        EMAIL_TO: foo@bar.baz
+    - name: Upload test coverage report
+      run: bash <(curl -s https://codecov.io/bash) -t ${{ secrets.CODECOV_TOKEN }}

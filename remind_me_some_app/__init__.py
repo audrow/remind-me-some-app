@@ -2,6 +2,7 @@ from email_keyword_matcher import EmailKeywordMatcher
 from remind_me_some import Goal, ScheduleManager
 from schedule import Scheduler
 
+import atexit
 from datetime import timedelta
 import logging
 import os
@@ -26,7 +27,8 @@ class EmailManager:
     ):
         logger.info(f'Initializing {self.__class__.__name__} instance')
 
-        if None in [email_to, send_email_address, send_email_password, send_email_host, send_email_port]:
+        if None in [email_to, send_email_address, send_email_password,
+                    send_email_host, send_email_port]:
             raise ValueError("Not all args are defined")
         self._to_email = email_to
         self._email_keyword_matcher = EmailKeywordMatcher(
@@ -36,7 +38,8 @@ class EmailManager:
             port=send_email_port,
         )
         for keyword in ['done', 'snooze', 'cancel']:
-            self._email_keyword_matcher.add_keyword(keyword, self._make_keyword_callback(keyword))
+            self._email_keyword_matcher.add_keyword(
+                keyword, self._make_keyword_callback(keyword))
 
     @staticmethod
     def _make_keyword_callback(name):
@@ -80,6 +83,7 @@ class RemindMeSomeApp:
 
         self._is_running = False
         self._run_thread: typing.Optional[threading.Thread] = None
+        atexit.register(self.stop)
 
     @property
     def is_running(self):
@@ -100,7 +104,8 @@ class RemindMeSomeApp:
             **kwargs,
     ):
         if 'callback' not in kwargs:
-            kwargs['callback'] = self._email_manager.make_send_email_callback(name),
+            kwargs['callback'] = \
+                self._email_manager.make_send_email_callback(name)
         logger.info(f"Adding goal '{name}'")
         self._schedule_manager.add_goal(
             Goal(
@@ -134,12 +139,8 @@ class RemindMeSomeApp:
             raise RuntimeError("Already stopped")
         logger.info('Stopping run loop')
         self._is_running = False
+        self._run_thread.join()
         self._run_thread = None
-
-    def __del__(self):
-        if self.is_running:
-            self._is_running = False
-            self._run_thread.join()
 
 
 if __name__ == '__main__':

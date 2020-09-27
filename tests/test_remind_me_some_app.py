@@ -31,7 +31,7 @@ def test_start_and_stop(mocker, num_goals):
     mocker.patch('remind_me_some_app.EmailKeywordMatcher')
     mocker.patch('remind_me_some_app.Scheduler')
 
-    app = RemindMeSomeApp()
+    app = RemindMeSomeApp(sleep_duration=0.001)
     for i in range(1, num_goals):
         app.add_goal(name=f'goal {i}', frequency=timedelta(days=2))
 
@@ -46,19 +46,6 @@ def test_start_and_stop(mocker, num_goals):
 
         app.stop()
         assert not app.is_running
-
-
-@pytest.mark.parametrize('num_goals', [0, 1, 5])
-@pytest.mark.timeout(1)
-def test_del_stops_thread(mocker, num_goals):
-    mocker.patch('remind_me_some_app.EmailKeywordMatcher')
-    mocker.patch('remind_me_some_app.Scheduler')
-
-    app = RemindMeSomeApp(sleep_duration=0.001)
-    for i in range(1, num_goals):
-        app.add_goal(name=f'goal {i}', frequency=timedelta(days=2))
-    app.start()
-    del app
 
 
 @pytest.mark.parametrize('num_goals', [1, 5])

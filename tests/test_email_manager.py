@@ -37,7 +37,7 @@ def test_init_with_env_vars(mocker):
     assert ekm_mock.called
 
 
-@pytest.mark.parametrize('missing_args',[
+@pytest.mark.parametrize('missing_args', [
     ['EMAIL_TO'],
     ['ROBOT_EMAIL_ADDRESS'],
     ['ROBOT_EMAIL_PASSWORD'],
